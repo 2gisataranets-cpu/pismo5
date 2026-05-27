@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Interface - Otello Support</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #faf8f0; 
+            color: #3a3a3a; 
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        .font-heading { font-family: 'Playfair Display', serif; }
+        
+        .scrollbar-default::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-default::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-default::-webkit-scrollbar-thumb { background: #c4b99a; border-radius: 4px; }
+        .scrollbar-default::-webkit-scrollbar-thumb:hover { background: #a89d7e; }
+        
+        .bg-otello-green { background-color: #7ec83b; }
+        .text-otello-green { color: #5a9a2a; }
+        .hover-bg-otello-green:hover { background-color: #5a9a2a; }
+        
+        .chat-bubble { 
+            max-width: 80%; 
+            padding: 14px 18px; 
+            border-radius: 8px; 
+            position: relative; 
+            margin-bottom: 18px; 
+            font-size: 0.95rem; 
+            line-height: 1.6;
+            letter-spacing: 0.01em;
+        }
+        .chat-bubble.guest { 
+            background-color: #f5f3e8; 
+            border: 1px solid #d4cbb8; 
+        }
+        .chat-bubble.agent { 
+            background-color: #e8f5d4; 
+            border: 1px solid #c4d9a0; 
+            border-left: 4px solid #5a9a2a;
+        }
+        
+        .toolbar-btn { 
+            padding: 6px 10px; 
+            border: 1px solid transparent; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            color: #6b6356; 
+            font-weight: 500;
+            background: none;
+        }
+        .toolbar-btn:hover { background-color: #ede9db; border-color: #c4b99a; }
+        
+        .nav-divider { 
+            height: 1px; 
+            background: linear-gradient(to right, transparent, #c4b99a, transparent); 
+        }
+        
+        .green-accent-line {
+            width: 40px;
+            height: 3px;
+            background-color: #5a9a2a;
+            border-radius: 2px;
+        }
+        
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        .typing-dot { animation: blink 1.4s infinite both; }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in { animation: slideIn 0.6s ease-out forwards; }
+        
+        .scenario-card { transition: all 0.3s ease; cursor: pointer; }
+        .scenario-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(90,154,42,0.15); border-color: #5a9a2a; }
+        
+        .star-rating { display: flex; gap: 2px; }
+        .star { color: #c4b99a; font-size: 14px; }
+        .star.filled { color: #5a9a2a; }
+
+        .btn-back-scenarios {
+            transition: all 0.2s ease;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(58, 50, 38, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal-content {
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .badge-tag {
+            display: inline-block;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .otello-principles {
+            background: linear-gradient(135deg, #e8f0d4 0%, #d4e8c0 100%);
+            border: 1px solid #c4d9a0;
+            border-left: 4px solid #5a9a2a;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-[14px]">
+
+    <!-- Top Navigation -->
+    <nav class="bg-[#f5f3e8] border-b border-[#d4cbb8] h-12 flex items-center px-6 justify-between shrink-0" style="z-index: 50;">
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                        <rect x="4" y="12" width="28" height="20" rx="1" stroke="#5a9a2a" stroke-width="1.5" fill="none"/>
+                        <rect x="8" y="18" width="5" height="6" rx="2.5" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <rect x="15.5" y="18" width="5" height="6" rx="2.5" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <rect x="23" y="18" width="5" height="6" rx="2.5" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <rect x="8" y="26" width="5" height="5" rx="2" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <rect x="15.5" y="26" width="5" height="5" rx="2" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <rect x="23" y="26" width="5" height="5" rx="2" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="0.8"/>
+                        <ellipse cx="12" cy="8" rx="3" ry="4" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="1"/>
+                        <ellipse cx="18" cy="8" rx="3" ry="4" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="1"/>
+                        <ellipse cx="24" cy="8" rx="3" ry="4" fill="#c8e6a0" stroke="#5a9a2a" stroke-width="1"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="font-heading text-xl font-bold text-otello-green">otello</span>
+                    <div class="star-rating mt-0.5">
+                        <span class="star filled">★</span>
+                        <span class="star filled">★</span>
+                        <span class="star filled">★</span>
+                        <span class="star filled">★</span>
+                        <span class="star filled">★</span>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-divider w-px h-6"></div>
+            <div class="flex items-center gap-5 text-[14px] font-medium">
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Фильтры</span>
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Админка</span>
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Реестр отмен</span>
+                <span class="text-[#5a9a2a] font-semibold cursor-pointer border-b-2 border-[#5a9a2a] pb-0.5">Отели</span>
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Записи звонков</span>
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Памятка (КС)</span>
+                <span class="text-[#8a7d6b] cursor-pointer hover:text-[#5a4a3a]">Островок</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="confirmGoBack()" class="btn-back-scenarios flex items-center gap-2 px-4 py-1.5 bg-white border border-[#d4cbb8] rounded-lg text-[#5a4a3a] font-medium text-[13px] hover:bg-[#f5f3e8]">
+                <svg class="w-4 h-4 text-[#5a9a2a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Выбрать ситуацию
+            </button>
+            <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0]">
+                <span class="text-[#5a9a2a] font-bold text-sm">О</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- SCENARIO SELECTION SCREEN -->
+    <div id="scenarioScreen" class="flex-1 overflow-y-auto bg-[#faf8f0]">
+        <div class="max-w-5xl mx-auto px-8 py-10">
+            <div class="text-center mb-10">
+                <div class="green-accent-line mx-auto mb-4"></div>
+                <h1 class="font-heading text-3xl font-bold text-[#5a4a3a] mb-3">Выберите ситуацию</h1>
+                <p class="text-[#8a7d6b] text-[15px]">Выберите одну из пяти ситуаций для тренировки ответов гостям</p>
+            </div>
+            
+            <div class="otello-principles rounded-xl p-4 mb-8">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-[#5a9a2a] flex items-center justify-center shrink-0">
+                        <span class="text-white font-bold text-lg">О</span>
+                    </div>
+                    <div>
+                        <h3 class="font-heading font-bold text-[#5a4a3a] text-[15px] mb-1">Принципы Otello</h3>
+                        <p class="text-[#5a4a3a] text-[13px] leading-relaxed mb-2">При ответе гостям опирайся на принципы Otello:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Персонализация</span>
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Прозрачность</span>
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Искренность</span>
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Скорость решения</span>
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Эмпатия</span>
+                            <span class="bg-[#5a9a2a] text-white text-[11px] px-3 py-1 rounded-full font-semibold">Присоединение</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Scenario 1 -->
+                <div class="scenario-card bg-white rounded-xl border-2 border-[#d4cbb8] p-5 animate-slide-in" style="animation-delay: 0.1s" onclick="selectScenario(0)">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#e8f0d4] flex items-center justify-center shrink-0 border-2 border-[#c4d9a0]">
+                            <span class="text-2xl"></span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-[#e8f0d4] text-[#5a9a2a] text-[11px] px-2 py-0.5 rounded-full font-semibold">Ситуация 1</span>
+                                <span class="text-[#8a7d6b] text-[11px]">Отмена — заболел ребёнок</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-[#5a4a3a] text-[16px] mb-1">Отмена из-за болезни ребёнка</h3>
+                            <p class="text-[#8a7d6b] text-[13px] leading-relaxed">Гостья обращается 04.12 в чат с вопросом об отмене бронирования и возврате денег, так как заболел ребёнок.</p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Чат</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Отмена</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 2 -->
+                <div class="scenario-card bg-white rounded-xl border-2 border-[#d4cbb8] p-5 animate-slide-in" style="animation-delay: 0.2s" onclick="selectScenario(1)">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#e8f0d4] flex items-center justify-center shrink-0 border-2 border-[#c4d9a0]">
+                            <span class="text-2xl"></span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-[#e8f0d4] text-[#5a9a2a] text-[11px] px-2 py-0.5 rounded-full font-semibold">Ситуация 2</span>
+                                <span class="text-[#8a7d6b] text-[11px]">Задержка рейса</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-[#5a4a3a] text-[16px] mb-1">Задержка рейса — отмена</h3>
+                            <p class="text-[#8a7d6b] text-[13px] leading-relaxed">Рейс задержали, гость вылетит только 06.12. Обращается 05.12 письмом с вопросом об отмене и возврате.</p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Почта</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Отмена</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 3 -->
+                <div class="scenario-card bg-white rounded-xl border-2 border-[#d4cbb8] p-5 animate-slide-in" style="animation-delay: 0.3s" onclick="selectScenario(2)">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#e8f0d4] flex items-center justify-center shrink-0 border-2 border-[#c4d9a0]">
+                            <span class="text-2xl"></span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-[#e8f0d4] text-[#5a9a2a] text-[11px] px-2 py-0.5 rounded-full font-semibold">Ситуация 3</span>
+                                <span class="text-[#8a7d6b] text-[11px]">Изменение маршрута</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-[#5a4a3a] text-[16px] mb-1">Отмена койко-места в хостеле</h3>
+                            <p class="text-[#8a7d6b] text-[13px] leading-relaxed">Гостья обращается 30.11 в 09:00 с просьбой отменить койко-место из-за изменения маршрута и просит возврат.</p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Чат</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Отмена</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 4 -->
+                <div class="scenario-card bg-white rounded-xl border-2 border-[#d4cbb8] p-5 animate-slide-in" style="animation-delay: 0.4s" onclick="selectScenario(3)">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#e8f0d4] flex items-center justify-center shrink-0 border-2 border-[#c4d9a0]">
+                            <span class="text-2xl"></span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-[#e8f0d4] text-[#5a9a2a] text-[11px] px-2 py-0.5 rounded-full font-semibold">Ситуация 4</span>
+                                <span class="text-[#8a7d6b] text-[11px]">Болезнь гостя</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-[#5a4a3a] text-[16px] mb-1">Отмена из-за болезни</h3>
+                            <p class="text-[#8a7d6b] text-[13px] leading-relaxed">Гостья обращается 30.11 с вопросом об отмене бронирования из-за болезни и возврате денежных средств.</p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Почта</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Отмена</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 5 -->
+                <div class="scenario-card bg-white rounded-xl border-2 border-[#d4cbb8] p-5 md:col-span-2 animate-slide-in" style="animation-delay: 0.5s" onclick="selectScenario(4)">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-[#e8f0d4] flex items-center justify-center shrink-0 border-2 border-[#c4d9a0]">
+                            <span class="text-2xl"></span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-[#e8f0d4] text-[#5a9a2a] text-[11px] px-2 py-0.5 rounded-full font-semibold">Ситуация 5</span>
+                                <span class="text-[#8a7d6b] text-[11px]">Болезнь жены + справка</span>
+                            </div>
+                            <h3 class="font-heading font-bold text-[#5a4a3a] text-[16px] mb-1">Отмена — заболела жена, есть справка</h3>
+                            <p class="text-[#8a7d6b] text-[13px] leading-relaxed">Гость обращается 01.12 с вопросом об отмене и возврате: жена заболела на период проживания, справка от врача есть.</p>
+                            <div class="mt-3 flex gap-2">
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Почта</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Отмена</span>
+                                <span class="badge-tag bg-[#f5f3e8] text-[#8a7d6b]">Справка</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM SCREEN -->
+    <div id="crmScreen" class="flex-1 flex overflow-hidden" style="display: none;">
+        
+        <!-- Left Sidebar -->
+        <aside class="w-64 bg-[#f5f3e8] border-r border-[#d4cbb8] flex flex-col shrink-0">
+            <div class="px-4 py-3 border-b border-[#d4cbb8] bg-[#ede9db]">
+                <div class="flex items-center justify-between">
+                    <span class="font-heading font-bold text-[#5a4a3a] text-[15px]">Заявки</span>
+                    <svg class="w-4 h-4 text-[#8a7d6b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto scrollbar-default py-2">
+                <div class="flex items-center justify-between px-4 py-2.5 text-[#5a4a3a] cursor-pointer hover:bg-[#ede9db] font-medium">
+                    <span>Входящие</span>
+                    <span class="text-[#8a7d6b] text-[12px]">776</span>
+                </div>
+                <div class="flex items-center px-4 py-2.5 text-[#c44] cursor-pointer hover:bg-[#ede9db] font-medium">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    SLA сегодня
+                </div>
+                
+                <div class="flex items-center justify-between px-4 py-2.5 text-[#5a4a3a] cursor-pointer hover:bg-[#ede9db] font-medium">
+                    <span class="flex items-center">
+                        <svg class="w-3 h-3 mr-2 text-[#8a7d6b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        Клиентский саппорт
+                    </span>
+                    <span class="text-[#8a7d6b] text-[12px]">550</span>
+                </div>
+                
+                <div class="px-8 py-2 text-[#8a7d6b] hover:text-[#5a4a3a] cursor-pointer font-medium">Консультации: открытые</div>
+                <div class="px-8 py-2 text-[#8a7d6b] hover:text-[#5a4a3a] cursor-pointer font-medium">Корректировки: открытые</div>
+                
+                <div class="mx-4 my-2 nav-divider"></div>
+                
+                <div class="px-4 py-2 bg-[#e8f0d4] text-[#5a4a3a] font-semibold">Основные <span class="ml-2 text-[12px] font-normal text-[#8a7d6b]">110</span></div>
+                <div class="px-8 py-2 text-[#8a7d6b] hover:text-[#5a4a3a] cursor-pointer font-medium">Подзаказы <span class="ml-2 text-[12px] font-normal">157</span></div>
+                <div class="px-8 py-2 text-[#8a7d6b] hover:text-[#5a4a3a] cursor-pointer font-medium">Неприсвоенные</div>
+                <div class="px-8 py-2 text-[#8a7d6b] hover:text-[#5a4a3a] cursor-pointer font-medium">Замороженные <span class="ml-2 text-[12px] font-normal">6</span></div>
+            </div>
+            
+            <div class="p-4 border-t border-[#d4cbb8] bg-[#ede9db]">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0]">
+                        <span class="text-[#5a9a2a] font-bold text-xs">★</span>
+                    </div>
+                    <div>
+                        <div class="font-heading font-semibold text-[#5a4a3a] text-[14px]">Лучший сотрудник</div>
+                        <div class="text-[11px] text-[#8a7d6b] font-medium">Мастер сервиса</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Content -->
+        <main class="flex-1 flex flex-col min-w-0 bg-[#faf8f0]">
+            <!-- Header -->
+            <header class="h-12 border-b border-[#d4cbb8] flex items-center justify-between px-6 bg-[#f5f3e8] shrink-0">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <button onclick="confirmGoBack()" class="p-1.5 hover:bg-[#ede9db] rounded-full" title="Вернуться" style="background:none;border:none;cursor:pointer;">
+                        <svg class="w-4 h-4 text-[#8a7d6b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <div class="h-5 w-px bg-[#c4b99a]"></div>
+                    <span class="text-[#8a7d6b] font-medium">Создать заявку</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="headerBadge" class="bg-[#e8f0d4] text-[#5a9a2a] text-[12px] px-3 py-1 rounded-full font-semibold">★ Островок</span>
+                    <button onclick="confirmGoBack()" class="ml-3 text-[12px] text-[#5a9a2a] font-medium hover:text-[#4a8a22] flex items-center gap-1 border border-[#5a9a2a] rounded-full px-3 py-1 hover:bg-[#e8f0d4] transition-colors" style="background:none;cursor:pointer;">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        К ситуациям
+                    </button>
+                </div>
+            </header>
+
+            <!-- Ticket Info Header -->
+            <div class="bg-[#f5f3e8] border-b border-[#d4cbb8] p-5 shrink-0">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-3">
+                            <svg class="w-4 h-4 text-[#5a9a2a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            <span class="font-heading font-bold text-[#5a4a3a] text-[16px]">Клиент</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-8 gap-y-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-[#8a7d6b]">Имя:</span>
+                                <span id="infoName" class="text-[#5a9a2a] font-medium">—</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-[#8a7d6b]">Гость:</span>
+                                <span id="infoGuest" class="text-[#5a4a3a] font-medium">—</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-[#8a7d6b]">Email:</span>
+                                <a id="infoEmail" href="#" class="text-[#5a9a2a] hover:underline font-medium">—</a>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-[#8a7d6b]">Телефон:</span>
+                                <a id="infoPhone" href="#" class="text-[#5a9a2a] hover:underline font-medium">—</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ml-8 text-[#8a7d6b] border-l border-[#d4cbb8] pl-4">
+                        <div class="font-heading font-bold text-[#5a4a3a] mb-1 text-[14px]" id="infoTicket">#Отелло/К/—</div>
+                        <div class="text-[13px]" id="infoDate">—</div>
+                        <div class="mt-2 flex items-center gap-1.5">
+                            <span class="bg-[#c8e6a0] text-[#5a9a2a] px-2 py-0.5 rounded text-[11px] font-semibold">Новое</span>
+                            <span class="bg-[#ffe0b2] text-[#b8662a] px-2 py-0.5 rounded text-[11px] font-semibold">Важно</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="flex-1 overflow-y-auto p-8 bg-[#faf8f0] scrollbar-default" id="chatContainer">
+            </div>
+
+            <!-- Reply Input Area -->
+            <div class="bg-[#f5f3e8] border-t border-[#d4cbb8] shrink-0">
+                <div class="flex items-center gap-1 p-2 border-b border-[#d4cbb8] bg-[#ede9db]">
+                    <div class="flex gap-1 border-r border-[#c4b99a] pr-2 mr-1">
+                        <button class="toolbar-btn font-bold text-[13px]">B</button>
+                        <button class="toolbar-btn italic text-[13px]">I</button>
+                        <button class="toolbar-btn underline text-[13px]">U</button>
+                    </div>
+                    <div class="flex gap-1">
+                        <button class="toolbar-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg></button>
+                        <button class="toolbar-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg></button>
+                    </div>
+                    <div class="ml-auto flex items-center gap-2">
+                         <span class="text-[11px] text-[#8a7d6b] italic font-medium">Редактор</span>
+                    </div>
+                </div>
+
+                <div class="p-2">
+                    <textarea id="replyInput" class="w-full h-24 p-3 text-[15px] border border-[#d4cbb8] rounded-lg focus:ring-2 focus:ring-[#5a9a2a] focus:border-[#5a9a2a] resize-none outline-none text-[#5a4a3a] bg-[#faf8f0] placeholder-[#b4a88a] font-medium" placeholder="Напишите ответ гостю..."></textarea>
+                </div>
+
+                <div class="flex justify-between items-center px-4 py-3 bg-[#ede9db] border-t border-[#d4cbb8]">
+                    <div class="flex gap-2">
+                        <button class="text-[13px] text-[#8a7d6b] hover:text-[#5a4a3a] flex items-center gap-1.5 font-medium" style="background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                            Прикрепить файлы
+                        </button>
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <div class="flex items-center gap-1.5 text-[13px] text-[#5a4a3a] font-medium">
+                            <input type="checkbox" checked class="accent-[#5a9a2a] w-3.5 h-3.5">
+                            <span id="sendLabel">Отправить ответ</span>
+                        </div>
+                        <button onclick="sendMessage()" class="bg-otello-green hover-bg-otello-green text-white px-5 py-2 rounded-lg text-[14px] font-semibold transition-colors flex items-center gap-2 shadow-sm" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            Отправить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="w-80 bg-[#f5f3e8] border-l border-[#d4cbb8] flex flex-col shrink-0 overflow-y-auto scrollbar-default">
+            <div class="p-5 border-b border-[#d4cbb8]">
+                <div class="green-accent-line mb-3"></div>
+                <h3 class="font-heading font-bold text-[#5a4a3a] text-[14px] uppercase tracking-wide mb-4">Департамент и Статус</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Департамент</label>
+                        <select class="w-full bg-[#faf8f0] border border-[#d4cbb8] text-[#5a4a3a] text-[14px] rounded-lg p-2 focus:outline-none focus:border-[#5a9a2a] font-medium">
+                            <option>Клиентская поддержка</option>
+                            <option>Финансы</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Исполнитель</label>
+                        <select class="w-full bg-[#faf8f0] border border-[#d4cbb8] text-[#5a4a3a] text-[14px] rounded-lg p-2 focus:outline-none focus:border-[#5a9a2a] font-medium">
+                            <option>Лучший сотрудник</option>
+                            <option>Ольга Смирнова</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Статус</label>
+                            <select class="w-full bg-[#e8f0d4] border border-[#c4d9a0] text-[#5a9a2a] text-[14px] rounded-lg p-2 font-semibold focus:outline-none">
+                                <option>Открыто</option>
+                                <option>В работе</option>
+                                <option>Закрыто</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Приоритет</label>
+                            <select class="w-full bg-[#faf8f0] border border-[#d4cbb8] text-[#5a4a3a] text-[14px] rounded-lg p-2 focus:outline-none focus:border-[#5a9a2a] font-medium">
+                                <option>Низкий</option>
+                                <option>Средний</option>
+                                <option>Высокий</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5">
+                <div class="green-accent-line mb-3"></div>
+                <h3 class="font-heading font-bold text-[#5a4a3a] text-[14px] uppercase tracking-wide mb-4">SLA и Время</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Срок ответа</label>
+                        <div class="text-[14px] text-[#c44] font-semibold flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            45 мин. назад
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[12px] text-[#8a7d6b] mb-1.5 font-medium">Время ожидания</label>
+                        <div class="w-full bg-[#e8e4d8] rounded-full h-2">
+                            <div class="bg-[#c44] h-2 rounded-full" style="width: 70%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 mt-auto text-center">
+                 <div class="text-[11px] text-[#b4a88a] italic font-medium">
+                     Версия 3.2.1 • Grand Budapest Edition
+                 </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-2xl shadow-xl border border-[#d4cbb8] p-8 max-w-md w-full mx-4 text-center">
+            <div class="w-16 h-16 rounded-full bg-[#e8f0d4] flex items-center justify-center mx-auto mb-4 border-2 border-[#c4d9a0]">
+                <svg class="w-8 h-8 text-[#5a9a2a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </div>
+            <h3 class="font-heading text-xl font-bold text-[#5a4a3a] mb-2">Вернуться к выбору ситуаций?</h3>
+            <p class="text-[#8a7d6b] text-[14px] mb-6">Текущий диалог будет завершён. Вы сможете выбрать другую ситуацию для тренировки.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal()" class="px-6 py-2.5 border border-[#d4cbb8] rounded-lg text-[#5a4a3a] font-medium hover:bg-[#f5f3e8] transition-colors" style="background:none;cursor:pointer;font-family:'Inter',sans-serif;">
+                    Остаться
+                </button>
+                <button onclick="goBack()" class="px-6 py-2.5 bg-otello-green hover-bg-otello-green text-white rounded-lg font-semibold transition-colors shadow-sm" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;">
+                    Вернуться
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var scenarios = [
+            {
+                name: "Екатерина",
+                guest: "Екатерина",
+                email: "kate.mama@mail.ru",
+                phone: "+79031234567",
+                ticket: "#Отелло/К/9642401",
+                date: "от 04.12.2026 14:30",
+                hotel: "Семейный Отель",
+                hotelId: "57135165-874f-4a0f-b0c6-68abcfc99e66",
+                dates: "10.12 — 15.12",
+                cost: "18 500 ₽",
+                headerBadge: "★ Островок | Лучший сотрудник",
+                sendLabel: "Отправить в чат",
+                initialMessages: [
+                    { type: 'guest', name: 'Екатерина', role: 'Гость', text: 'Здравствуйте!\n\nМогу ли я отменить бронирование и вернуть деньги, так как заболел ребёнок?\n\nБронирование: 57135165-874f-4a0f-b0c6-68abcfc99e66\n\nНам очень жаль, но ребёнок заболел и мы не можем приехать. Спасибо за понимание.', time: '04.12.2026 14:30' }
+                ],
+                state: 'initial',
+                getResponse: function(lowerText, state) {
+                    if (state === 'initial') {
+                        if (lowerText.includes("понимаю") || lowerText.includes("сочувству") || lowerText.includes("отмен") || lowerText.includes("возврат") || lowerText.includes("спасибо")) {
+                            this.state = 'resolved';
+                            return "Спасибо большое за понимание! Ребёнку уже лучше, но мы решили не рисковать. Благодарю за помощь с отменой!";
+                        } else {
+                            return "Спасибо за ответ. А документы какие-нибудь нужны для подтверждения? У нас есть справка от педиатра.";
+                        }
+                    } else if (state === 'resolved') {
+                        return "Хорошего вам дня и здоровья!";
+                    }
+                    return "Спасибо за информацию!";
+                }
+            },
+            {
+                name: "Андрей",
+                guest: "Андрей",
+                email: "andrey.fly@gmail.com",
+                phone: "+79169876543",
+                ticket: "#Отелло/К/9642415",
+                date: "от 05.12.2026 10:15",
+                hotel: "Аэропорт Отель",
+                hotelId: "325c1579-4f2c-441f-91e8-134243832c0b",
+                dates: "05.12 — 08.12",
+                cost: "12 600 ₽",
+                headerBadge: "★ Островок | Лучший сотрудник",
+                sendLabel: "Отправить на почту",
+                initialMessages: [
+                    { type: 'guest', name: 'Андрей', role: 'Гость', text: 'Добрый день!\n\nМой рейс задержали и я вылету только 06.12. Уже забронировал номер в другом отеле ближе к аэропорту.\n\nМожно ли отменить моё бронирование и вернуть деньги?\n\nБронирование: 325c1579-4f2c-441f-91e8-134243832c0b\n\nЗаранее спасибо!', time: '05.12.2026 10:15' }
+                ],
+                state: 'initial',
+                getResponse: function(lowerText, state) {
+                    if (state === 'initial') {
+                        if (lowerText.includes("понимаю") || lowerText.includes("задержк") || lowerText.includes("отмен") || lowerText.includes("возврат") || lowerText.includes("спасибо")) {
+                            this.state = 'resolved';
+                            return "Спасибо за оперативный ответ! Задержка рейса — это действительно форс-мажор. Буду ждать возврата на карту. Хорошего дня!";
+                        } else {
+                            return "Спасибо за ответ. А как долго будет происходить возврат средств? И нужно ли мне предоставить документы о задержке рейса?";
+                        }
+                    } else if (state === 'resolved') {
+                        return "Спасибо! Всего доброго!";
+                    }
+                    return "Спасибо за информацию!";
+                }
+            },
+            {
+                name: "Ольга",
+                guest: "Ольга",
+                email: "olga.travel@yandex.ru",
+                phone: "+79261112233",
+                ticket: "#Отелло/К/9642430",
+                date: "от 30.11.2026 09:00",
+                hotel: "Хостел Центр",
+                hotelId: "0951ba8e-0e51-4e42-8fcf-ddd5c4fc2e90",
+                dates: "05.12 — 08.12",
+                cost: "3 200 ₽",
+                headerBadge: "★ Островок | Лучший сотрудник",
+                sendLabel: "Отправить в чат",
+                initialMessages: [
+                    { type: 'guest', name: 'Ольга', role: 'Гость', text: 'Доброе утро!\n\nУ меня изменился маршрут поездки, поэтому прошу отменить койко-место в вашем хостеле.\n\nТакже хотелось бы узнать о возможности вернуть денежные средства.\n\nБронирование: 0951ba8e-0e51-4e42-8fcf-ddd5c4fc2e90\n\nСпасибо!', time: '30.11.2026 09:00' }
+                ],
+                state: 'initial',
+                getResponse: function(lowerText, state) {
+                    if (state === 'initial') {
+                        if (lowerText.includes("понимаю") || lowerText.includes("отмен") || lowerText.includes("возврат") || lowerText.includes("спасибо")) {
+                            this.state = 'resolved';
+                            return "Отлично, спасибо за быструю помощь! Буду ждать возврат. Всего хорошего!";
+                        } else {
+                            return "Спасибо за ответ. А когда примерно придут деньги? И нужна ли от меня какая-то дополнительная информация?";
+                        }
+                    } else if (state === 'resolved') {
+                        return "Спасибо! До свидания!";
+                    }
+                    return "Спасибо за информацию!";
+                }
+            },
+            {
+                name: "Марина",
+                guest: "Марина",
+                email: "marina.k@inbox.ru",
+                phone: "+79057778899",
+                ticket: "#Отелло/К/9642445",
+                date: "от 30.11.2026 16:45",
+                hotel: "Отель Уют",
+                hotelId: "4e31ba1c-1ebd-4539-9d19-49e74a33c42d",
+                dates: "08.12 — 12.12",
+                cost: "16 800 ₽",
+                headerBadge: "★ Островок | Лучший сотрудник",
+                sendLabel: "Отправить на почту",
+                initialMessages: [
+                    { type: 'guest', name: 'Марина', role: 'Гость', text: 'Здравствуйте!\n\nХочу отменить бронирование, так как я заболела.\n\nТакже хочу вернуть денежные средства за бронирование.\n\nБронирование: 4e31ba1c-1ebd-4539-9d19-49e74a33c42d\n\nНадеюсь на понимание.', time: '30.11.2026 16:45' }
+                ],
+                state: 'initial',
+                getResponse: function(lowerText, state) {
+                    if (state === 'initial') {
+                        if (lowerText.includes("сочувству") || lowerText.includes("понимаю") || lowerText.includes("отмен") || lowerText.includes("возврат") || lowerText.includes("спасибо")) {
+                            this.state = 'resolved';
+                            return "Большое спасибо за понимание и сочувствие! Буду ждать возврат средств. Выздоравливаю, надеюсь скоро поправлюсь!";
+                        } else {
+                            return "Спасибо за ответ. А нужна ли справка от врача для подтверждения? У меня есть медицинская справка.";
+                        }
+                    } else if (state === 'resolved') {
+                        return "Спасибо! Хорошего дня!";
+                    }
+                    return "Спасибо за информацию!";
+                }
+            },
+            {
+                name: "Дмитрий",
+                guest: "Дмитрий",
+                email: "dmitry.s@company.ru",
+                phone: "+79104445566",
+                ticket: "#Отелло/К/9642460",
+                date: "от 01.12.2026 09:00",
+                hotel: "Бизнес Отель",
+                hotelId: "0eb87b77-073c-480d-b605-08812a163ba3",
+                dates: "10.12 — 15.12",
+                cost: "24 000 ₽",
+                headerBadge: "★ Островок | Лучший сотрудник",
+                sendLabel: "Отправить на почту",
+                initialMessages: [
+                    { type: 'guest', name: 'Дмитрий', role: 'Гость', text: 'Добрый день!\n\nМожно ли отменить бронирование и вернуть деньги?\n\nМоя жена заболела как раз на период проживания в отеле. Справка от врача есть.\n\nБронирование: 0eb87b77-073c-480d-b605-08812a163ba3\n\nЗаранее благодарю!', time: '01.12.2026 09:00' }
+                ],
+                state: 'initial',
+                getResponse: function(lowerText, state) {
+                    if (state === 'initial') {
+                        if (lowerText.includes("понимаю") || lowerText.includes("сочувству") || lowerText.includes("отмен") || lowerText.includes("возврат") || lowerText.includes("справк") || lowerText.includes("спасибо")) {
+                            this.state = 'resolved';
+                            return "Спасибо за понимание! Справку от врача могу прислать на почту, если нужно. Жене уже немного лучше, но пока не можем планировать поездку. Благодарю за помощь!";
+                        } else {
+                            return "Спасибо за ответ. Как мне отправить вам справку от врача — можно на эту почту?";
+                        }
+                    } else if (state === 'resolved') {
+                        return "Спасибо! Выздоравливайте и всего хорошего!";
+                    }
+                    return "Спасибо за информацию!";
+                }
+            }
+        ];
+
+        var currentScenario = null;
+        var conversationState = 'initial';
+
+        function selectScenario(index) {
+            currentScenario = scenarios[index];
+            conversationState = 'initial';
+            scenarios[index].state = 'initial';
+            
+            document.getElementById('infoName').textContent = currentScenario.name;
+            document.getElementById('infoGuest').textContent = currentScenario.guest;
+            document.getElementById('infoEmail').textContent = currentScenario.email;
+            document.getElementById('infoPhone').textContent = currentScenario.phone;
+            document.getElementById('infoTicket').textContent = currentScenario.ticket;
+            document.getElementById('infoDate').textContent = currentScenario.date;
+            document.getElementById('headerBadge').textContent = currentScenario.headerBadge;
+            document.getElementById('sendLabel').textContent = currentScenario.sendLabel;
+            
+            var chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            var dateDiv = document.createElement('div');
+            dateDiv.className = 'flex justify-center mb-8';
+            dateDiv.innerHTML = '<div class="flex items-center gap-3"><div class="w-16 h-px bg-[#d4cbb8]"></div><span class="text-[#8a7d6b] text-[12px] italic font-medium">Сегодня</span><div class="w-16 h-px bg-[#d4cbb8]"></div></div>';
+            chatContainer.appendChild(dateDiv);
+            
+            currentScenario.initialMessages.forEach(function(msg) {
+                if (msg.type === 'guest') {
+                    addMessageToChat('guest', msg.name, msg.role, msg.text, msg.time, chatContainer);
+                }
+            });
+            
+            var statusDiv = document.createElement('div');
+            statusDiv.className = 'flex justify-center my-6';
+            statusDiv.innerHTML = '<div class="flex items-center gap-2 text-[12px] text-[#8a7d6b] font-medium bg-[#f5f3e8] px-4 py-1.5 rounded-full border border-[#d4cbb8]"><div class="w-2 h-2 bg-[#5a9a2a] rounded-full animate-pulse"></div><span>Гость онлайн</span></div>';
+            chatContainer.appendChild(statusDiv);
+            
+            document.getElementById('scenarioScreen').style.display = 'none';
+            document.getElementById('crmScreen').style.display = 'flex';
+            
+            setTimeout(function() {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 100);
+        }
+
+        function addMessageToChat(type, name, role, text, time, container) {
+            var wrapper = document.createElement('div');
+            wrapper.className = 'flex gap-4 mb-8 animate-fade-in-up';
+            if (type === 'agent') {
+                wrapper.classList.add('justify-end');
+            }
+            
+            var avatar = '';
+            if (type === 'agent') {
+                avatar = '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0] shrink-0"><span class="text-[#5a9a2a] font-bold text-sm">★</span></div>';
+            } else {
+                avatar = '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0] shrink-0"><span class="text-[#5a9a2a] font-bold text-sm">' + name.charAt(0) + '</span></div>';
+            }
+            
+            if (type === 'guest') {
+                wrapper.innerHTML = avatar + 
+                    '<div class="flex-1">' +
+                    '<div class="flex items-baseline justify-between mb-1.5">' +
+                    '<span class="font-heading font-bold text-[#5a4a3a] text-[15px]">' + name + ' <span class="text-[#8a7d6b] font-normal text-[12px] italic">(' + role + ')</span></span>' +
+                    '<span class="text-[11px] text-[#8a7d6b] font-medium">' + time + '</span>' +
+                    '</div>' +
+                    '<div class="chat-bubble guest">' + text.replace(/\n/g, '<br>') + '</div>' +
+                    '</div>';
+            } else {
+                wrapper.innerHTML = 
+                    '<div class="flex-1">' +
+                    '<div class="flex items-baseline justify-between mb-1.5 flex-row-reverse gap-2">' +
+                    '<span class="font-heading font-bold text-[#5a4a3a] text-[15px]">Лучший сотрудник <span class="text-[#8a7d6b] font-normal text-[12px] italic">(Мастер сервиса)</span></span>' +
+                    '<span class="text-[11px] text-[#8a7d6b] font-medium">' + time + '</span>' +
+                    '</div>' +
+                    '<div class="chat-bubble agent">' + text.replace(/\n/g, '<br>') + '</div>' +
+                    '</div>' + avatar;
+            }
+            container.appendChild(wrapper);
+        }
+
+        function sendMessage() {
+            var input = document.getElementById('replyInput');
+            var text = input.value.trim();
+            var chatContainer = document.getElementById('chatContainer');
+
+            if (text && currentScenario) {
+                addMessageToChat('agent', 'Лучший сотрудник', 'Мастер сервиса', text, 'Только что', chatContainer);
+                input.value = '';
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                var lowerText = text.toLowerCase();
+                var responseText = currentScenario.getResponse(lowerText, conversationState);
+                conversationState = currentScenario.state || conversationState;
+                
+                showTypingIndicator(chatContainer);
+                
+                setTimeout(function() {
+                    removeTypingIndicator(chatContainer);
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'flex gap-4 mb-8 animate-fade-in-up';
+                    wrapper.innerHTML = 
+                        '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0] shrink-0"><span class="text-[#5a9a2a] font-bold text-sm">' + currentScenario.guest.charAt(0) + '</span></div>' +
+                        '<div class="flex-1">' +
+                        '<div class="flex items-baseline justify-between mb-1.5">' +
+                        '<span class="font-heading font-bold text-[#5a4a3a] text-[15px]">' + currentScenario.guest + ' <span class="text-[#8a7d6b] font-normal text-[12px] italic">(Гость)</span></span>' +
+                        '<span class="text-[11px] text-[#8a7d6b] font-medium">Только что</span>' +
+                        '</div>' +
+                        '<div class="chat-bubble guest">' + responseText.replace(/\n/g, '<br>') + '</div>' +
+                        '</div>';
+                    chatContainer.appendChild(wrapper);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }, 2000 + Math.random() * 2000);
+            }
+        }
+
+        function showTypingIndicator(container) {
+            var typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'flex gap-4 mb-8';
+            typingDiv.innerHTML = 
+                '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#e8f0d4] border-2 border-[#c4d9a0] shrink-0"><span class="text-[#5a9a2a] font-bold text-sm">' + currentScenario.guest.charAt(0) + '</span></div>' +
+                '<div class="flex-1">' +
+                '<div class="flex items-baseline justify-between mb-1.5">' +
+                '<span class="font-heading font-bold text-[#5a4a3a] text-[15px]">' + currentScenario.guest + ' печатает<span class="animate-pulse">...</span></span>' +
+                '</div>' +
+                '<div class="bg-[#f5f3e8] border border-[#d4cbb8] px-4 py-2.5 rounded-lg inline-flex space-x-1.5">' +
+                '<div class="w-2 h-2 bg-[#8a7d6b] rounded-full typing-dot"></div>' +
+                '<div class="w-2 h-2 bg-[#8a7d6b] rounded-full typing-dot"></div>' +
+                '<div class="w-2 h-2 bg-[#8a7d6b] rounded-full typing-dot"></div>' +
+                '</div></div>';
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator(container) {
+            var indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function confirmGoBack() {
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+
+        function goBack() {
+            closeModal();
+            document.getElementById('crmScreen').style.display = 'none';
+            document.getElementById('scenarioScreen').style.display = 'block';
+            conversationState = 'initial';
+            currentScenario = null;
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                sendMessage();
+            }
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
+
