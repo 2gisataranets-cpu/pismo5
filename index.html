@@ -142,6 +142,24 @@
             border: 1px solid #c4d9a0;
             border-left: 4px solid #5a9a2a;
         }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #e8f5d4;
+            border: 2px solid #5a9a2a;
+            border-radius: 8px;
+            padding: 16px 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col text-[14px]">
@@ -822,6 +840,43 @@
             container.appendChild(wrapper);
         }
 
+        function sendEmailNotification(agentMessage, guestName, ticketNumber) {
+            var formData = new FormData();
+            formData.append('email', '2gis.a.taranets@gmail.com');
+            formData.append('name', 'CRM Otello - Отмена');
+            formData.append('message', 'Новый ответ в CRM Otello (Отмена)\n\nГость: ' + guestName + '\nТикет: ' + ticketNumber + '\n\nОтвет сотрудника:\n' + agentMessage);
+            formData.append('_subject', 'Новый ответ - Отмена - ' + guestName + ' (' + ticketNumber + ')');
+            formData.append('_captcha', 'false');
+            formData.append('_template', 'table');
+
+            fetch('https://formsubmit.co/ajax/2gis.a.taranets@gmail.com', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Email sent successfully:', data);
+                showNotification('Ответ отправлен на почту');
+            })
+            .catch(error => {
+                console.error('Error sending email:', error);
+            });
+        }
+
+        function showNotification(message) {
+            var notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = '<div class="flex items-center gap-2"><svg class="w-5 h-5 text-[#5a9a2a]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span class="text-[#5a4a3a] font-medium">' + message + '</span></div>';
+            document.body.appendChild(notification);
+            
+            setTimeout(function() {
+                notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(function() {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+
         function sendMessage() {
             var input = document.getElementById('replyInput');
             var text = input.value.trim();
@@ -831,6 +886,9 @@
                 addMessageToChat('agent', 'Лучший сотрудник', 'Мастер сервиса', text, 'Только что', chatContainer);
                 input.value = '';
                 chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                // Отправка на почту
+                sendEmailNotification(text, currentScenario.guest, currentScenario.ticket);
                 
                 var lowerText = text.toLowerCase();
                 var responseText = currentScenario.getResponse(lowerText, conversationState);
@@ -908,4 +966,3 @@
     </script>
 </body>
 </html>
-
